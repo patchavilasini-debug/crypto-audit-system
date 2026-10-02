@@ -1,0 +1,27 @@
+{# The three inputs Mosca's inequality needs. Shared by Add System and Protect. #}
+<div class="grid2">
+  <div class="field">
+    <label for="secrecy_years">Years the data must stay secret <span class="dim">(Mosca's X)</span></label>
+    <input type="number" id="secrecy_years" name="secrecy_years" min="0" max="200" step="0.5"
+           value="{{ form.secrecy_years if form.secrecy_years is not none else '' }}"
+           placeholder="e.g. 50 for land records">
+    <div class="dim" style="margin-top:6px">Land and identity 50+, medical 40, tax 7, public website 0.</div>
+  </div>
+  <div class="field">
+    <label for="migration_years">Years to migrate it <span class="dim">(Mosca's Y)</span></label>
+    <input type="number" id="migration_years" name="migration_years" min="0" max="20" step="0.5"
+           value="{{ form.migration_years if form.migration_years is not none else '' }}"
+           placeholder="e.g. 3 for an old database">
+    <div class="dim" style="margin-top:6px">Old vendor software 3 to 5, a modern web server 1.</div>
+  </div>
+</div>
+<div class="field">
+  <label for="exposure">Can its traffic be copied?</label>
+  <select id="exposure" name="exposure">
+    <option value="">Choose...</option>
+    {% for e in exposures %}
+    <option value="{{ e }}" {% if form.exposure == e %}selected{% endif %}>{{ e }}</option>
+    {% endfor %}
+  </select>
+  <div class="dim" style="margin-top:6px">Harvest-now-decrypt-later needs a copy. Public internet is easiest to copy, air-gapped hardest.</div>
+</div>

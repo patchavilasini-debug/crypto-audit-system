@@ -1,0 +1,98 @@
+{# ---------------------------------------------------------------
+   Mosca's rule, in plain words.
+
+   Instead of "50 + 3 - 10 = +43", people see real years:
+     "Must stay secret until 2079. Lock may break around 2036.
+      Copied data could be read for 43 years."
+   --------------------------------------------------------------- #}
+
+{% macro mosca_badge(r) -%}
+  {%- if r.mosca_state == 'safe' -%}
+    <span class="badge b-Low">Safe</span>
+  {%- elif r.mosca_state == 'late' -%}
+    <span class="badge b-Critical">Too late &middot; {{ r.gap_years|round|int }} yrs</span>
+  {%- else -%}
+    <span class="badge b-Medium">OK &middot; {{ (-r.gap_years)|round|int }} yrs spare</span>
+  {%- endif -%}
+{%- endmacro %}
+
+
+{% macro mosca_box(r, now) -%}
+{%- set secret_end = (r.migration_years + r.secrecy_years)|round|int -%}
+{%- set secret_year = now + secret_end -%}
+{%- set switch_year = now + (r.migration_years|round|int) -%}
+
+<div class="mbox {{ r.mosca_state }}">
+
+  {% if r.mosca_state == 'safe' %}
+  <div class="mhead"><span class="dot"></span>Safe</div>
+  <p>It already uses <b class="mono">{{ r.algorithm }}-{{ r.key_size }}</b>, a lock that a quantum
+  computer is not expected to break. Data copied today stays protected.</p>
+  <div class="mbar"><i class="ok" style="width:100%"></i></div>
+  <div class="mlabels"><span>{{ now }}</span><span>stays protected</span></div>
+
+  {% else %}
+  {%- set lock = r.deadline_years -%}
+  {%- set lock_year = now + lock -%}
+  {%- set span = [secret_end, lock, 1]|max -%}
+
+    {% if r.mosca_state == 'late' %}
+    <div class="mhead"><span class="dot"></span>Too late &mdash; {{ r.gap_years|round|int }} years {% if r.crypto_primitive == 'hash' %}open to forgery{% else %}exposed{% endif %}</div>
+    <p>
+      {% if r.crypto_primitive == 'hash' %}These records must stay trustworthy
+      until <b>{{ secret_year }}</b>.{% else %}This data must stay secret until
+      <b>{{ secret_year }}</b>.{% endif %}
+      {% if lock == 0 %}
+      But its {% if r.crypto_primitive == 'hash' %}seal{% else %}lock{% endif %}
+      (<span class="mono">{{ r.algorithm }}-{{ r.key_size }}</span>) is
+      <b>already broken today</b>.
+      {% else %}
+      But a quantum computer may break its lock
+      (<span class="mono">{{ r.algorithm }}-{{ r.key_size }}</span>) around <b>{{ lock_year }}</b>.
+      {% endif %}
+      {% if r.crypto_primitive == 'hash' %}
+      A seal does not hide data, it proves nothing was changed &mdash; so anyone can now
+      <b>fake a document that passes the check</b> &mdash; for the {{ r.gap_years|round|int }} years
+      these records still matter.
+      {% else %}
+      Anyone who copies it now could read it for <b>{{ r.gap_years|round|int }} years</b>
+      while it still matters.
+      {% endif %}
+    </p>
+    <div class="mbar">
+      <i class="ok" style="width:{{ (lock / span * 100)|round(1) }}%"></i><i class="bad" style="width:{{ ((secret_end - lock) / span * 100)|round(1) }}%"></i>
+    </div>
+    <div class="mlabels">
+      <span>{{ now }}</span>
+      <span>{% if lock == 0 %}broken now{% else %}lock breaks ~{{ lock_year }}{% endif %}</span>
+      <span>secret until {{ secret_year }}</span>
+    </div>
+
+    {% else %}
+    <div class="mhead"><span class="dot"></span>Still time &mdash; {{ (-r.gap_years)|round|int }} years to spare</div>
+    <p>
+      This only matters until <b>{{ secret_year }}</b>, and its
+      {% if r.crypto_primitive == 'hash' %}seal{% else %}lock{% endif %} should hold until about
+      <b>{{ lock_year }}</b>. Plan the switch, but it is not urgent.
+    </p>
+    <div class="mbar">
+      <i class="ok" style="width:{{ (secret_end / span * 100)|round(1) }}%"></i><i class="spare" style="width:{{ ((lock - secret_end) / span * 100)|round(1) }}%"></i>
+    </div>
+    <div class="mlabels">
+      <span>{{ now }}</span>
+      <span>secret until {{ secret_year }}</span>
+      <span>lock breaks ~{{ lock_year }}</span>
+    </div>
+    {% endif %}
+
+  <details class="mmath">
+    <summary>Show the maths (Mosca's rule)</summary>
+    <p>Years secret <b>{{ r.secrecy_years|round(1) }}</b>
+     + years to switch <b>{{ r.migration_years|round(1) }}</b>
+     &minus; years until the lock breaks <b>{{ lock }}</b>
+     = <b>{{ "%+.1f"|format(r.gap_years) }}</b>.
+     Above zero means the data outlives its lock.</p>
+  </details>
+  {% endif %}
+</div>
+{%- endmacro %}

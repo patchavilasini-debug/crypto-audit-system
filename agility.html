@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Crypto-Agility{% endblock %}
+
+{% block content %}
+<h1>Crypto-Agility</h1>
+<p class="lead">Can the lock be changed next year <b>without touching the code</b>? Here it can &mdash; and this page proves it.</p>
+
+<div class="cards">
+  <div class="card {% if sites %}crit{% else %}low{% endif %}">
+    <b>{{ sites|length }}</b><span>LOCKS WRITTEN INTO CODE</span></div>
+  <div class="card {% if on_policy == total_users %}low{% else %}high{% endif %}">
+    <b>{{ on_policy }} / {{ total_users }}</b><span>PASSWORDS ON CURRENT POLICY</span></div>
+  <div class="card {% if scans and short|length == scans|length %}low{% elif scans %}high{% endif %}">
+    <b>{{ short|length }} / {{ scans|length }}</b><span>SCANNED CERTS &le; 90 DAYS</span></div>
+  <div class="card"><b>{{ changes|length }}</b><span>POLICY CHANGES RECORDED</span></div>
+</div>
+
+<div class="panel">
+  <h3>1. Is any lock written into the code?</h3>
+  {% if sites %}
+  <table><tbody>
+    {% for s in sites %}
+    <tr><td class="mono" style="width:180px">{{ s.file }}:{{ s.line }}</td>
+        <td class="mono dim">{{ s.code }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% else %}
+  <div class="flash ok" style="margin-top:0">No. Every lock is chosen by one settings file.</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3>2. The settings</h3>
+  <p class="dim" style="margin:0 0 14px">Change these and the whole site follows.</p>
+  <form method="POST">
+    {{ csrf_field() }}
+    <input type="hidden" name="action" value="policy">
+    <table><tbody>
+      <tr>
+        <td style="width:210px">Password hashing</td>
+        <td><select name="password_hash" {% if not user or user.role != 'auditor' %}disabled{% endif %}>
+          {% for k, v in passwords.items() %}
+          <option value="{{ k }}" {% if policy.password_hash == k %}selected{% endif %}>{{ v.label }} &mdash; {{ v.quantum }}</option>
+          {% endfor %}</select></td>
+      </tr>
+      <tr>
+        <td>Signatures</td>
+        <td><select name="signature" {% if not user or user.role != 'auditor' %}disabled{% endif %}>
+          {% for k, v in signatures.items() %}
+          <option value="{{ k }}" {% if policy.signature == k %}selected{% endif %}>{{ v.label }} &mdash; {{ v.quantum }}</option>
+          {% endfor %}</select></td>
+      </tr>
+      <tr>
+        <td>Certificate keys</td>
+        <td><select name="certificate_key" {% if not user or user.role != 'auditor' %}disabled{% endif %}>
+          {% for k, v in cert_keys.items() %}
+          <option value="{{ k }}" {% if policy.certificate_key == k %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}</select></td>
+      </tr>
+    </tbody></table>
+    {% if user and user.role == 'auditor' %}
+    <button type="submit" class="btn" style="margin-top:14px">Save policy</button>
+    {% endif %}
+  </form>
+</div>
+
+<div class="panel">
+  <h3>3. Prove it</h3>
+  <p class="dim" style="margin:0 0 12px">Sign something, change the Signatures setting, sign again. The lock changes; the old signature still checks out.</p>
+  <form method="POST">
+    {{ csrf_field() }}
+    <div class="field">
+      <label for="text">Record</label>
+      <input id="text" name="text" value="{{ sign_result.text if sign_result else 'Deed 4417, Survey 118/2A, owner R. Kumar' }}">
+    </div>
+    <div class="field">
+      <label for="token">Signature <span class="dim">(paste one here to check it)</span></label>
+      <input id="token" name="token" class="mono" value="{{ sign_result.token if sign_result else '' }}">
+    </div>
+    <button type="submit" name="action" value="sign" class="btn">Sign with current policy</button>
+    <button type="submit" name="action" value="verify" class="btn small" style="margin-left:8px">Check signature</button>
+  </form>
+  {% if sign_result %}
+  <div class="flash {% if sign_result.valid %}ok{% else %}bad{% endif %}" style="margin-top:14px">
+    {% if sign_result.made %}Signed with <b>{{ sign_result.token.split('.')[0] }}</b>, chosen by the policy.
+    {% elif sign_result.valid %}Valid. Made with <b>{{ sign_result.token.split('.')[0] }}</b>.
+    {% else %}Not valid. Either the record was changed after signing, or the signature is not ours.{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<details class="more-info">
+  <summary>More detail: passwords, certificates, post-quantum, history</summary>
+<div class="panel">
+  <h3>4. Migrating without asking anyone</h3>
+  <p style="margin:0 0 12px">Each stored password records which algorithm made it. After a policy
+  change, old passwords still work, and each one is re-hashed with the new algorithm the next time
+  that person signs in. Nobody is asked to reset anything.</p>
+  <table><tbody>
+    {% for name, count in hashes.items() %}
+    <tr>
+      <td class="mono" style="width:210px">{{ name }}</td>
+      <td>{{ count }} account(s)
+        {% if name == policy.password_hash %}<span class="badge b-Low">current policy</span>
+        {% else %}<span class="badge b-Medium">upgrades at next sign in</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>5. Short-lived certificates</h3>
+  <p style="margin:0 0 12px">A 13-month certificate means a year before a new key type reaches
+  that server, whatever else is done. 90-day certificates with automatic renewal turn the whole
+  estate over four times a year on their own.</p>
+  {% if scans %}
+  <table>
+    <thead><tr><th>HOST</th><th class="n">CERTIFICATE LIFETIME</th><th></th></tr></thead>
+    <tbody>
+      {% for r in scans %}
+      <tr><td>{{ r.host }}</td><td class="n">{{ r.lifetime_days }} days</td>
+        <td>{% if r.lifetime_days <= 90 %}<span class="badge b-Low">agile</span>
+            {% else %}<span class="badge b-High">slow to rotate</span>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="dim" style="margin:0">No certificates scanned yet. Use the <a href="/scan">Scan</a> page.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3>6. The post-quantum slot</h3>
+  <p style="margin:0 0 12px">The migration target for signatures is ML-DSA. It plugs into the
+  service as one more entry in its list of algorithms, and nothing that calls the service changes.</p>
+  <table><tbody>
+    {% for k, v in pending.items() %}
+    <tr><td style="width:210px">{{ v.label }}</td>
+        <td class="dim">{{ v.note }} The Python <code>cryptography</code> library installed here
+        does not provide it yet.</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+{% if changes %}
+<div class="panel">
+  <h3>Policy history</h3>
+  <table><tbody>
+    {% for c in changes %}
+    <tr><td class="mono" style="width:170px">{{ c.at }}</td><td>{{ c.who }}</td>
+        <td class="dim">{{ c.detail }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>Software you did not write</h3>
+  <p style="margin:0">Vendor products cannot be made agile from outside. The fix is a contract clause:
+  no new purchase unless it ships a CBOM, reads its algorithms from configuration, and demonstrates
+  an algorithm change before acceptance. This site's own CBOM is on the
+  <a href="/inventory">Inventory</a> page.</p>
+</div>
+</details>
+{% endblock %}

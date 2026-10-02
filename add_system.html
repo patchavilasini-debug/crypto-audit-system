@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Add System{% endblock %}
+
+{% block content %}
+<h1>Add System</h1>
+<p>Every field is required. The algorithm list is built from the knowledge base,
+so you cannot enter something the system does not understand.</p>
+
+{% if errors %}
+<div class="flash bad">
+  {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="panel">
+<form method="POST" action="/add">
+    {{ csrf_field() }}
+
+  <div class="grid2">
+    <div class="field">
+      <label for="name">System name</label>
+      <input type="text" id="name" name="name" value="{{ form.name or '' }}"
+             placeholder="e.g. Land Registry Database" maxlength="80">
+    </div>
+    <div class="field">
+      <label for="department">Department</label>
+      <select id="department" name="department">
+        <option value="">Choose...</option>
+        {% for d in departments %}
+        <option value="{{ d }}" {% if form.department == d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="field">
+      <label for="type">System type</label>
+      <select id="type" name="type">
+        <option value="">Choose...</option>
+        {% for t in types %}
+        <option value="{{ t }}" {% if form.type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="field">
+      <label for="algorithm">Cryptographic algorithm</label>
+      <select id="algorithm" name="algorithm">
+        <option value="">Choose...</option>
+        {% for a in algorithms %}
+        <option value="{{ a }}" {% if form.algorithm == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="key_size">Key size in bits</label>
+      <input type="number" id="key_size" name="key_size"
+             value="{{ form.key_size or '' }}" placeholder="e.g. 2048" min="1" max="100000">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="sensitivity">Data sensitivity</label>
+    <select id="sensitivity" name="sensitivity">
+      <option value="">Choose...</option>
+      {% for s in sensitivities %}
+      <option value="{{ s }}" {% if form.sensitivity == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {% include "_mosca_fields.html" %}
+
+  <div class="field">
+    <label for="criticality">System criticality</label>
+    <select id="criticality" name="criticality">
+      <option value="">Choose...</option>
+      {% for c in criticalities %}
+      <option value="{{ c }}" {% if form.criticality == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button type="submit" class="btn">Add to inventory</button>
+
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+
+{% block content %}
+<h1>{{ host }}</h1>
+<p>Every scan on record, oldest first. A change in the certificate line is a
+migration that actually happened.</p>
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr><th>SCANNED</th><th>TLS</th><th>CERTIFICATE</th><th class="n">DAYS LEFT</th>
+      <th>ISSUED BY</th><th>RESULT</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="mono">{{ r.scanned_at or '-' }}</td>
+        <td class="mono">{{ r.tls_version or '-' }}</td>
+        <td class="mono">
+          {% if r.algorithm %}{{ r.algorithm }}-{{ r.key_size }}{% else %}-{% endif %}
+        </td>
+        <td class="n">{{ r.days_left if r.days_left is not none else '-' }}</td>
+        <td class="dim">{{ r.issuer or '-' }}</td>
+        <td>
+          {% if r.error %}
+          <span style="color:var(--critical)">{{ r.error }}</span>
+          {% elif r.trusted %}
+          <span style="color:var(--low)">trusted</span>
+          {% else %}
+          <span style="color:var(--high)">not trusted</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if rows|length < 2 %}
+<p class="dim">Only one scan so far. Scan this host again later and the change
+will show up here.</p>
+{% else %}
+<p class="dim">{{ rows|length }} scans recorded. If the certificate line changes
+between two rows, that is the migration, measured rather than reported.</p>
+{% endif %}
+
+<a class="btn small noprint" href="/expiry">Back to expiry</a>
+{% endblock %}

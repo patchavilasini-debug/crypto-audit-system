@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Systems{% endblock %}
+{% from "_mosca.html" import mosca_badge %}
+
+{% block content %}
+<h1>Systems</h1>
+<p>Worst first. Click <b>Why</b> to see the working, <b>Fix</b> for what to do.</p>
+
+<form class="tools noprint" method="GET" action="/inventory">
+  <input type="text" name="q" value="{{ query }}" placeholder="Search">
+  <select name="state" onchange="this.form.submit()">
+    <option value="">All</option>
+    <option value="late" {% if state == 'late' %}selected{% endif %}>Too late</option>
+    <option value="inside" {% if state == 'inside' %}selected{% endif %}>Still time</option>
+    <option value="safe" {% if state == 'safe' %}selected{% endif %}>Safe</option>
+  </select>
+  <select name="dept" onchange="this.form.submit()">
+    <option value="">All departments</option>
+    {% for d in all_depts %}
+    <option value="{{ d }}" {% if dept == d %}selected{% endif %}>{{ d }}</option>
+    {% endfor %}
+  </select>
+  {% if query or dept or state or level %}<a class="btn small" href="/inventory">Clear</a>{% endif %}
+  <span class="count">{{ results|length }} of {{ total }}</span>
+</form>
+
+<div class="panel">
+  {% if results %}
+  <table class="rows">
+    <thead><tr><th>#</th><th>SYSTEM</th><th>LOCK</th><th>STATUS</th><th>CHANGE TO</th><th></th></tr></thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td class="dim">{{ r.priority }}</td>
+        <td><b>{{ r.name }}</b><div class="dim">{{ r.department }}</div></td>
+        <td class="mono">{{ r.algorithm }}-{{ r.key_size }}</td>
+        <td>{{ mosca_badge(r) }}</td>
+        <td class="dim">{{ r.target }}</td>
+        <td class="noprint" style="white-space:nowrap;text-align:right">
+          <a class="btn small" href="/results?system={{ r.id }}">Why</a>
+          <a class="btn small" href="/protect?system={{ r.id }}">Fix</a>
+          {% if user and user.role == 'auditor' %}
+          <form method="POST" action="/delete/{{ r.id }}" style="display:inline">
+            {{ csrf_field() }}
+            <button type="submit" class="btn small" title="Remove from the register">&times;</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="margin:0">Nothing matches.</p>
+  {% endif %}
+</div>
+
+<p class="dim noprint">
+  <a href="/add">Add a system</a> &middot; <a href="/import">Import a spreadsheet</a> &middot;
+  <a href="/export.csv">Download CSV</a> &middot; <a href="/cbom.json">Download CBOM</a>
+</p>
+{% endblock %}

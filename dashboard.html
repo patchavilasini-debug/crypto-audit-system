@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% from "_mosca.html" import mosca_badge %}
+
+{% block content %}
+<h1>Dashboard</h1>
+<p class="lead">
+  {% if o.total == 0 %}
+  No systems in the register yet. <a href="/add">Add one</a> or
+  <a href="/import">import a spreadsheet</a>.
+  {% elif o.late|length == 0 %}
+  <b style="color:var(--low)">Nothing is too late.</b> Every system's lock outlasts
+  the data it protects.
+  {% else %}
+  <b class="red">{{ o.late|length }} of {{ o.total }}</b>
+  system{{ "s" if o.total != 1 }} {{ "is" if o.late|length == 1 else "are" }} too late &mdash;
+  {{ "its" if o.late|length == 1 else "their" }} data will still matter after a quantum
+  computer can break the lock.
+  {% endif %}
+</p>
+
+<div class="grid3">
+  <a class="tile red" href="/inventory?state=late">
+    <b>{{ o.late|length }}</b><span class="t">Too late</span>
+    <span class="d">Fix these first</span></a>
+  <a class="tile yellow" href="/inventory?state=inside">
+    <b>{{ o.inside|length }}</b><span class="t">Still time</span>
+    <span class="d">Plan, not urgent</span></a>
+  <a class="tile green" href="/inventory?state=safe">
+    <b>{{ o.safe|length }}</b><span class="t">Safe</span>
+    <span class="d">Already quantum-safe</span></a>
+</div>
+
+<div class="facts">
+  {% if broken %}<div class="fact"><a href="/inventory?state=late">Broken today: <b>{{ broken|length }}</b></a>
+    &middot; emergency steps finished on <b>{{ broken_fixed }}</b></div>{% endif %}
+  {% if o.cause %}<div class="fact">Biggest cause: <b>{{ o.cause[0] }}</b> ({{ o.cause[1] }} systems)</div>{% endif %}
+  <div class="fact">Quantum computer assumed in <b>{{ horizon }} years</b> ({{ this_year + horizon }})</div>
+  {% if expiring %}<div class="fact"><a href="/expiry"><b>{{ expiring|length }}</b> certificate(s) expire within 30 days</a></div>{% endif %}
+</div>
+
+<h2>Fix these first</h2>
+<div class="panel">
+  <table class="rows"><tbody>
+    {% for r in top %}
+    <tr>
+      <td style="width:30px;font-weight:600;color:var(--accent)">{{ loop.index }}</td>
+      <td><b>{{ r.name }}</b><div class="dim">{{ r.department }}</div></td>
+      <td class="mono">{{ r.algorithm }}-{{ r.key_size }}</td>
+      <td>{{ mosca_badge(r) }}</td>
+      <td class="noprint" style="text-align:right"><a class="btn small" href="/protect?system={{ r.id }}">How to fix</a></td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+<p><a href="/inventory">See all {{ o.total }} systems &rarr;</a></p>
+{% endblock %}

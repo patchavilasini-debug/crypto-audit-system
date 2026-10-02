@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Certificate Expiry{% endblock %}
+
+{% block content %}
+<h1>Certificate Expiry</h1>
+<p>An expired certificate takes a website offline. Soonest first.</p>
+
+<div class="cards">
+  <div class="card crit"><b>{{ counts.expired }}</b><span>ALREADY EXPIRED</span></div>
+  <div class="card crit"><b>{{ counts.critical }}</b><span>UNDER 14 DAYS</span></div>
+  <div class="card high"><b>{{ counts.urgent }}</b><span>UNDER 30 DAYS</span></div>
+  <div class="card med"><b>{{ counts.soon }}</b><span>UNDER 90 DAYS</span></div>
+  <div class="card low"><b>{{ counts.fine }}</b><span>MORE THAN 90 DAYS</span></div>
+  <div class="card"><b>{{ counts.unreachable }}</b><span>UNREACHABLE</span></div>
+</div>
+
+<div class="tools noprint">
+  {% if user and user.role == 'auditor' %}
+  <form method="POST" action="/rescan" style="display:inline">
+    {{ csrf_field() }}
+    <button type="submit" class="btn">Re-scan everything</button>
+  </form>
+  {% endif %}
+  <a class="btn small" href="/scan">Scan a new host</a>
+  <a class="btn small" href="/alerts">Email alerts</a>
+  <span class="count">{{ rows|length }} host(s), {{ total_scans }} scan(s) on record</span>
+</div>
+
+{% if not rows %}
+<div class="panel">
+  <p style="margin:0">Nothing scanned yet. Go to the <a href="/scan">Scan</a>
+  page and enter a hostname. Every scan is kept, so this page fills itself.</p>
+</div>
+{% else %}
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr><th>HOST</th><th class="n">DAYS LEFT</th><th>EXPIRES</th>
+      <th>CERTIFICATE</th><th>ISSUED BY</th><th>LAST SCANNED</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.host }}
+          {% if r.subject and r.subject != r.host %}
+          <div class="dim">issued to {{ r.subject }}</div>
+          {% endif %}
+        </td>
+        <td class="n">
+          {% if r.band == 'unreachable' %}
+          <span class="badge b-Critical">no answer</span>
+          {% elif r.days_left is none %}
+          <span class="dim">unknown</span>
+          {% elif r.days_left < 0 %}
+          <span class="badge b-Critical">expired</span>
+          {% else %}
+          <b style="color:
+            {% if r.band == 'critical' %}var(--critical)
+            {% elif r.band == 'urgent' %}var(--high)
+            {% elif r.band == 'soon' %}var(--medium)
+            {% else %}var(--low){% endif %}">{{ r.days_left }}</b>
+          {% endif %}
+        </td>
+        <td class="dim">{{ r.expires or '-' }}</td>
+        <td class="mono">
+          {% if r.algorithm %}{{ r.algorithm }}-{{ r.key_size }}{% else %}-{% endif %}
+          {% if r.tls_version %}<div class="dim">{{ r.tls_version }}</div>{% endif %}
+        </td>
+        <td class="dim">{{ r.issuer or '-' }}</td>
+        <td class="dim mono">{{ r.scanned_at or '-' }}</td>
+        <td class="noprint">
+          <a class="btn small" href="/history/{{ r.host }}">History</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if counts.expired or counts.critical %}
+<div class="flash bad">
+  {{ counts.expired + counts.critical }} certificate(s) are expired or expire
+  within two weeks. Renew those before anything else on this site.
+</div>
+{% endif %}
+
+{% endif %}
+
+
+{% endblock %}

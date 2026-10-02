@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Audit Report{% endblock %}
+
+{% block content %}
+<h1>Cryptographic Audit Report</h1>
+<p class="noprint">Generated {{ today }}. Use your browser's print function to
+save this as PDF.</p>
+
+<div class="panel">
+  <h2 style="margin-top:0">1. Summary</h2>
+  <p style="color:var(--text)">
+    {{ summary.total }} systems were assessed against the harvest-now-decrypt-later
+    threat, assuming a quantum computer can break RSA and ECC in {{ horizon }} years.
+    <b>{{ summary.late }}</b> are already past that deadline: their data must stay
+    secret for longer than their encryption will last, so anything copied today will
+    be readable while it still matters.
+    {{ summary.vulnerable }} use quantum-vulnerable cryptography,
+    {{ summary.broken_now }} use cryptography that is broken today, and
+    {{ summary.safe }} are already quantum-safe.
+    By risk level, {{ summary.Critical }} scored Critical,
+    {{ summary.High }} High,
+    {{ summary.Medium }} Medium and
+    {{ summary.Low }} Low.
+    {% if summary.review_needed %}
+    {{ summary.review_needed }} configuration(s) were not recognised by the
+    knowledge base and need manual review.
+    {% endif %}
+  </p>
+
+  <h2>2. Method</h2>
+  <p style="color:var(--text)">
+    The core test is Mosca's inequality: if the years the data must stay secret plus
+    the years to migrate the system exceed the years until a quantum computer can break
+    the algorithm, the system is already too late. The deadline is {{ horizon }} years
+    for RSA, ECC and Diffie-Hellman (broken by Shor's algorithm at any key size), and
+    zero for algorithms already broken today such as 3DES and SHA-1.
+  </p>
+  <p style="color:var(--text)">
+    Each system is then scored out of 100:
+    past the deadline ({{ weights.gap }}), quantum weakness of the algorithm
+    ({{ weights.weakness }}), exposure of its traffic to copying ({{ weights.exposure }})
+    and impact, from data sensitivity and system criticality ({{ weights.impact }}).
+    75 and above is Critical, 55 High, 35 Medium. Because the arrival date of a quantum
+    computer is unknown, the audit is also run at 7 and 15 years.
+  </p>
+  <p style="color:var(--text)">
+    Migration targets are the NIST post-quantum standards: ML-KEM (FIPS 203) for key
+    exchange, ML-DSA (FIPS 204) and SLH-DSA (FIPS 205) for signatures, deployed in
+    hybrid mode first, and AES-256 for stored data.
+  </p>
+
+  <h2>3. Cryptographic inventory</h2>
+  <table>
+    <thead><tr><th>ALGORITHM</th><th class="n">SYSTEMS</th></tr></thead>
+    <tbody>
+      {% for name, count in by_algorithm.items() %}
+      <tr><td class="mono">{{ name }}</td><td class="n">{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>4. Findings and migration priority</h2>
+  <table>
+    <thead>
+      <tr><th>PRI</th><th>SYSTEM</th><th>TYPE</th><th>CRYPTOGRAPHY</th>
+      <th>QUANTUM DEADLINE</th><th class="n">RISK</th><th>LEVEL</th></tr>
+    </thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td class="dim">{{ r.priority }}</td>
+        <td>{{ r.name }}</td>
+        <td class="dim">{{ r.type }}</td>
+        <td class="mono">{{ r.algorithm }}-{{ r.key_size }}</td>
+        <td>{% if r.mosca_state == 'safe' %}Safe{% elif r.mosca_state == 'late' %}Too late, {{ r.gap_years|round|int }} yrs{% else %}OK, {{ (-r.gap_years)|round|int }} yrs spare{% endif %}</td>
+        <td class="n">{{ r.risk_percentage }}</td>
+        <td><span class="badge b-{{ r.risk_level }}">{{ r.risk_level }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>5. Recommendations</h2>
+  {% for r in results %}
+  <p style="margin-bottom:12px">
+    <b style="color:var(--text)">{{ r.priority }}. {{ r.name }}</b>
+    <span class="badge b-{{ r.risk_level }}">{{ r.risk_level }}</span><br>
+    <span class="dim">{{ r.recommendation }}</span><br>
+    <span class="dim">Replace with: {{ r.replacement }}. {{ r.timeframe }}.</span><br>
+    <span class="dim">{{ r.crypto_note }}</span>
+  </p>
+  {% endfor %}
+
+  <h2>6. Notes</h2>
+  <p style="color:var(--text)">
+    This is a classical cryptographic audit. Risk values are configurable in
+    <code>crypto_rules.py</code> and should be reviewed against current
+    guidance before the findings are acted on. Systems flagged for manual
+    review were scored conservatively on the principle that an unrecognised
+    configuration is assumed weak until a human confirms otherwise.
+  </p>
+</div>
+{% endblock %}

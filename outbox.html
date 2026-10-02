@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Email{% endblock %}
+{% block content %}
+<h1>Saved email</h1>
+<p class="mono dim">{{ name }}</p>
+<pre style="background:var(--panel);border:1px solid var(--line);border-radius:5px;
+  padding:20px;font-family:var(--mono);font-size:13px;line-height:1.6;
+  white-space:pre-wrap;overflow-x:auto">{{ text }}</pre>
+<a class="btn small" href="/alerts">Back to alerts</a>
+{% endblock %}

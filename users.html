@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Accounts{% endblock %}
+
+{% block content %}
+<h1>Accounts</h1>
+<p>Two roles. An <b>auditor</b> can add, import, scan and delete. A
+<b>viewer</b> can only look.</p>
+
+{% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+
+<div class="panel">
+  <table>
+    <thead><tr><th>USERNAME</th><th>ROLE</th><th>CREATED</th><th></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.username }}
+          {% if user and user.id == u.id %}<span class="dim">(you)</span>{% endif %}</td>
+        <td><span class="badge {% if u.role == 'auditor' %}b-High{% else %}b-Low{% endif %}">
+          {{ u.role }}</span></td>
+        <td class="dim">{{ u.created }}</td>
+        <td class="noprint">
+          {% if not user or user.id != u.id %}
+          <form method="POST" style="display:inline">
+    {{ csrf_field() }}
+            <input type="hidden" name="delete_id" value="{{ u.id }}">
+            <button type="submit" class="btn small">Remove</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <h3>Add an account</h3>
+  <form method="POST">
+    {{ csrf_field() }}
+    <div class="grid2">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          {% for r in roles %}<option>{{ r }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password">
+      <div class="dim" style="margin-top:6px">At least 8 characters.</div>
+    </div>
+    <button type="submit" class="btn">Create account</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>How passwords are stored</h3>
+  <p style="margin:0">Never in plain text. Each one is hashed with PBKDF2-SHA256
+  over 250,000 rounds, with its own random salt. That is the same approach this
+  tool recommends on the advisory page, which seemed the least we could do.</p>
+</div>
+{% endblock %}

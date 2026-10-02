@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Scan{% endblock %}
+
+{% block content %}
+<h1>Scan a live server</h1>
+<p>Type a website. The tool reads the lock it really uses &mdash; no guessing.</p>
+
+{% if errors %}
+<div class="flash bad">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>
+{% endif %}
+
+<div class="panel">
+  <form method="POST">
+    {{ csrf_field() }}
+    <div class="field">
+      <label for="hosts">Hostnames, one per line</label>
+      <input id="hosts" name="hosts" placeholder="apgov.in">
+      <div class="dim" style="margin-top:6px">Up to 20 at a time. Full URLs are
+      fine, the site strips them down.</div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label for="department">If saved, record under</label>
+        <select id="department" name="department">
+          {% for d in departments %}<option>{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="sensitivity">Data sensitivity</label>
+        <select id="sensitivity" name="sensitivity">
+          {% for s in sensitivities %}<option {% if s == "Medium" %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="secrecy_years">Years the data must stay secret</label>
+        <input type="number" id="secrecy_years" name="secrecy_years" min="0" max="200" step="0.5" value="5">
+      </div>
+      <div class="field">
+        <label for="criticality">System criticality</label>
+        <select id="criticality" name="criticality">
+          {% for c in criticalities %}<option {% if c == "Medium" %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="migration_years">Years to migrate it</label>
+        <input type="number" id="migration_years" name="migration_years" min="0" max="20" step="0.5" value="1">
+      </div>
+      <div class="field">
+        <label>Exposure</label>
+        <input value="Public internet (it answered a scan)" disabled>
+      </div>
+    </div>
+
+    <button type="submit" class="btn">Scan</button>
+    <button type="submit" name="save" value="1" class="btn small"
+            style="margin-left:8px">Scan and add to inventory</button>
+  </form>
+  <p class="dim" style="margin:14px 0 0">Read-only: it never logs in or changes anything.</p>
+</div>
+
+{% if results %}
+<h2>What is actually running</h2>
+{% for r in results %}
+<div class="panel">
+  <div class="rowhead">
+    <h3 style="margin:0">{{ r.host }}</h3>
+    {% if r.error %}
+    <span class="badge b-Critical">could not scan</span>
+    {% else %}
+    <span class="badge b-{% if r.key_size >= 3072 or r.algorithm == 'ECC' %}Low{% else %}High{% endif %}">
+      {{ r.algorithm }}-{{ r.key_size }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if r.error %}
+  <p style="margin:12px 0 0">{{ r.error }}</p>
+  {% else %}
+  <table style="margin-top:12px"><tbody>
+    <tr><td class="dim" style="width:190px">TLS version</td>
+        <td class="mono">{{ r.tls_version }}</td></tr>
+    <tr><td class="dim">Cipher suite</td><td class="mono">{{ r.cipher_suite }}</td></tr>
+    <tr><td class="dim">Key exchange</td><td>{{ r.key_exchange }}</td></tr>
+    <tr><td class="dim">Symmetric cipher</td>
+        <td class="mono">{{ r.symmetric }}-{{ r.symmetric_bits }}</td></tr>
+    <tr><td class="dim">Certificate key</td>
+        <td class="mono">{{ r.algorithm }}-{{ r.key_size }}
+        <span class="dim">read by {{ r.key_size_method }}</span></td></tr>
+    {% if r.signature_algorithm %}
+    <tr><td class="dim">Signed with</td><td class="mono">{{ r.signature_algorithm }}</td></tr>
+    {% endif %}
+    {% if r.self_signed is defined and r.self_signed is not none %}
+    <tr><td class="dim">Self signed</td>
+        <td>{% if r.self_signed %}<span style="color:var(--high)">yes, not issued by an authority</span>
+        {% else %}no{% endif %}</td></tr>
+    {% endif %}
+    {% if r.alt_name_count %}
+    <tr><td class="dim">Also valid for</td>
+        <td class="dim">{{ r.alt_name_count }} name(s): {{ r.alt_names }}</td></tr>
+    {% endif %}
+    <tr><td class="dim">Issued to</td><td>{{ r.subject }}</td></tr>
+    <tr><td class="dim">Issued by</td><td>{{ r.issuer }}</td></tr>
+    <tr><td class="dim">Expires</td>
+        <td>{{ r.expires }}
+        {% if r.days_left is not none %}
+        <span style="color:{% if r.days_left < 30 %}var(--critical){% elif r.days_left < 90 %}var(--high){% else %}var(--low){% endif %}">
+        {{ r.days_left }} days left</span>
+        {% endif %}</td></tr>
+    <tr><td class="dim">Trusted chain</td>
+        <td>{% if r.cert_trusted %}<span style="color:var(--low)">yes</span>
+        {% else %}<span style="color:var(--critical)">no, verification failed</span>{% endif %}</td></tr>
+    <tr><td class="dim">Scanned</td><td class="dim">{{ r.scanned_at }}</td></tr>
+  </tbody></table>
+
+  <form method="POST" action="/subscribe" class="noprint"
+        style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+    {{ csrf_field() }}
+    <input type="hidden" name="host" value="{{ r.host }}">
+    <input type="hidden" name="back" value="/alerts">
+    <div style="font-weight:600;margin-bottom:10px">
+      Email me before this certificate expires
+    </div>
+    <div class="tools" style="margin-top:0">
+      <input type="email" name="email" required placeholder="you@department.gov.in"
+             style="flex:1;min-width:220px">
+      <select name="days_before">
+        <option value="7">7 days before</option>
+        <option value="14">14 days before</option>
+        <option value="30" selected>30 days before</option>
+        <option value="60">60 days before</option>
+        <option value="90">90 days before</option>
+      </select>
+      <button type="submit" class="btn small">Remind me</button>
+    </div>
+    {% if r.days_left is not none and r.days_left <= 30 %}
+    <div class="dim" style="margin-top:8px;color:var(--high)">
+      Only {{ r.days_left }} days left, so a 30 day reminder is already due.
+      The first check will email straight away.
+    </div>
+    {% endif %}
+  </form>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if saved %}
+<div class="flash ok">{{ saved }} host(s) added to the inventory and scored.</div>
+{% endif %}
+{% endif %}
+
+
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Expiry Alerts{% endblock %}
+
+{% block content %}
+<h1>Expiry Alerts</h1>
+<p>Who gets emailed before a certificate runs out. To add someone, scan a site and fill in the email under the result.</p>
+
+<div class="panel" style="border-left:4px solid {% if mode == 'smtp' %}var(--low){% else %}var(--medium){% endif %}">
+  {% if mode == 'smtp' %}
+  <h3 style="margin:0 0 6px">Sending real email</h3>
+  <p style="margin:0">A mail account is configured. Alerts go straight to the
+  addresses below.</p>
+  {% else %}
+  <h3 style="margin:0 0 6px">Outbox mode</h3>
+  <p style="margin:0">No email account set up, so emails are saved to the <code>outbox</code> folder instead. See ALERTS.md to send real email.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <div class="rowhead">
+    <h3 style="margin:0">Subscriptions</h3>
+    {% if user and user.role == 'auditor' and rows %}
+    <form method="POST" style="margin:0">
+    {{ csrf_field() }}
+      <input type="hidden" name="action" value="check">
+      <button type="submit" class="btn small">Check now and send</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if rows %}
+  <table style="margin-top:14px">
+    <thead><tr><th>HOST</th><th>EMAIL</th><th class="n">WARN AT</th>
+    <th class="n">DAYS LEFT</th><th>LAST EMAILED</th><th></th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.host }}</td>
+        <td class="dim">{{ r.email }}</td>
+        <td class="n">{{ r.days_before }} days</td>
+        <td class="n">
+          {% if r.error %}<span class="badge b-Critical">no answer</span>
+          {% elif r.days_left is none %}<span class="dim">not scanned</span>
+          {% elif r.days_left < 0 %}<span class="badge b-Critical">expired</span>
+          {% else %}
+          <b style="color:{% if r.days_left <= r.days_before %}var(--high){% else %}var(--low){% endif %}">
+            {{ r.days_left }}</b>
+          {% endif %}
+        </td>
+        <td class="dim">
+          {% if r.last_sent %}{{ r.last_sent }}{% if r.last_days is not none and r.last_days >= 0 %}
+          <div>at {{ r.last_days }} days</div>{% endif %}
+          {% else %}not yet{% endif %}
+        </td>
+        <td class="noprint">
+          <form method="POST" style="margin:0">
+    {{ csrf_field() }}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="{{ r.id }}">
+            <button type="submit" class="btn small">Stop</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="margin:12px 0 0">Nobody has asked for alerts yet. Go to
+  <a href="/scan">Scan</a>, scan a host, and fill in your email under the result.</p>
+  {% endif %}
+</div>
+
+{% if report %}
+<div class="panel">
+  <h3>What the check just did</h3>
+  <table><tbody>
+    {% for e in report %}
+    <tr>
+      <td style="width:90px">
+        {% if e.sent %}<span class="badge b-Low">sent</span>
+        {% elif e.due %}<span class="badge b-Critical">failed</span>
+        {% else %}<span class="dim">skipped</span>{% endif %}
+      </td>
+      <td>{{ e.alert.host }} <span class="dim">to {{ e.alert.email }}</span>
+        <div class="dim">{{ e.reason }}{% if e.due and not e.sent %} &mdash; {{ e.where }}{% endif %}</div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>Send a test email</h3>
+  <p style="margin:0 0 12px">Check an address will actually receive alerts
+  before relying on it.</p>
+  <form method="POST" class="tools" style="margin-top:0">
+    {{ csrf_field() }}
+    <input type="hidden" name="action" value="test">
+    <input type="email" name="email" required placeholder="you@department.gov.in"
+           style="flex:1;min-width:220px">
+    <button type="submit" class="btn small">Send test</button>
+  </form>
+  {% if test_result %}
+  <div class="flash {% if test_result.ok %}ok{% else %}bad{% endif %}" style="margin-top:12px">
+    {% if test_result.ok %}Done. {% if mode == 'smtp' %}Check the inbox.{% else %}Saved to {{ test_result.where }}{% endif %}
+    {% else %}{{ test_result.where }}{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if outbox %}
+<div class="panel">
+  <h3>Outbox</h3>
+  <p style="margin:0 0 12px">The ten most recent saved emails. Click one to read
+  it exactly as it would arrive.</p>
+  <table><tbody>
+    {% for f in outbox %}
+    <tr><td class="mono"><a href="/outbox/{{ f }}">{{ f }}</a></td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endif %}
+
+
+{% endblock %}
