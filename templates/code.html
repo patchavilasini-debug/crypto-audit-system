@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Code{% endblock %}
+
+{% block content %}
+<h1>Scan code</h1>
+<p>Upload a program file or a .zip. It finds old locks written inside.</p>
+
+{% if notes %}
+<div class="flash bad">{% for n in notes %}<div>{{ n }}</div>{% endfor %}</div>
+{% endif %}
+
+<div class="panel">
+  <form method="POST" enctype="multipart/form-data" class="tools" style="margin-top:0">
+    {{ csrf_field() }}
+    <input type="file" name="file" style="flex:1">
+    <button type="submit" class="btn">Scan</button>
+  </form>
+  <p class="dim" style="margin:12px 0 0">Nothing is saved. The code is read and thrown away.</p>
+</div>
+
+{% if summary %}
+<h2>{{ name }}</h2>
+<p class="dim" style="margin-top:-4px">{{ scanned }} file(s) read &middot;
+  {{ summary.total }} found in {{ summary.files }} file(s)</p>
+
+<div class="grid3">
+  <div class="tile red"><b>{{ summary.broken }}</b><span class="t">Broken today</span>
+    <span class="d">Fix now</span></div>
+  <div class="tile yellow"><b>{{ summary.quantum }}</b><span class="t">Quantum breaks it</span>
+    <span class="d">Plan the change</span></div>
+  <div class="tile green"><b>{{ summary.weak }}</b><span class="t">Below recommended</span>
+    <span class="d">Tidy up later</span></div>
+</div>
+
+{% if summary.algorithms %}
+<div class="facts">
+  {% for algo, n in summary.algorithms %}<div class="fact"><b>{{ algo }}</b> &times; {{ n }}</div>{% endfor %}
+</div>
+{% endif %}
+
+{% if findings %}
+<div class="panel">
+  <table class="rows">
+    <thead><tr><th>WHERE</th><th>FOUND</th><th>CHANGE TO</th></tr></thead>
+    <tbody>
+      {% for f in findings %}
+      <tr>
+        <td><span class="mono">{{ f.file }}:{{ f.line }}</span>
+          <div class="dim mono" style="font-size:12px">{{ f.code }}</div></td>
+        <td style="white-space:nowrap">
+          <span class="badge {% if f.status == 'broken' %}b-Critical{% elif f.status == 'quantum' %}b-Medium{% else %}b-Low{% endif %}">{{ f.algorithm }}</span>
+          <div class="dim">{{ f.status_text }}</div></td>
+        <td class="dim">{{ f.fix }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="dim">Comments and word lists count too &mdash; check each line before acting.</p>
+{% else %}
+<div class="flash ok">Nothing old found.</div>
+{% endif %}
+{% endif %}
+{% endblock %}

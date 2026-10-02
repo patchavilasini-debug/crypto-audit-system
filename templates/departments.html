@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Departments{% endblock %}
+
+{% block content %}
+<h1>Departments</h1>
+{% set worst = groups|sort(attribute='late', reverse=true)|first %}
+{% if worst and worst.late %}
+<p class="lead"><b class="red">{{ worst.name }}</b> is worst:
+  {{ worst.late }} of its {{ worst.count }} systems are too late.</p>
+{% endif %}
+
+<div class="legend3" style="margin-bottom:6px">
+  <span><span class="sw" style="background:#E45A5A"></span>Too late</span>
+  <span><span class="sw" style="background:#D9C24A"></span>Still time</span>
+  <span><span class="sw" style="background:#5AB98A"></span>Safe</span>
+</div>
+
+<div class="panel">
+  <table class="rows">
+    <tbody>
+      {% for g in groups|sort(attribute='late', reverse=true) %}
+      <tr>
+        <td style="width:190px"><a href="/inventory?dept={{ g.name|urlencode }}"
+            style="color:var(--text);font-weight:600">{{ g.name }}</a>
+          <div class="dim">{{ g.count }} systems</div></td>
+        <td>
+          <div class="sbar">
+            {% if g.late %}<i style="width:{{ (100 * g.late / g.count)|round(1) }}%;background:#E45A5A">{{ g.late }}</i>{% endif %}
+            {% if g.inside %}<i style="width:{{ (100 * g.inside / g.count)|round(1) }}%;background:#D9C24A;color:#1A1206">{{ g.inside }}</i>{% endif %}
+            {% if g.safe %}<i style="width:{{ (100 * g.safe / g.count)|round(1) }}%;background:#5AB98A;color:#06110C">{{ g.safe }}</i>{% endif %}
+          </div>
+        </td>
+        <td style="width:120px;text-align:right">
+          {% if g.late %}
+          <b style="color:var(--critical)">{{ (100 * g.late / g.count)|round|int }}%</b>
+          <div class="dim">too late</div>
+          {% else %}
+          <b style="color:var(--low)">clear</b>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="dim">Click a department to see its systems.</p>
+{% endblock %}

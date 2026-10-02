@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Audit Log{% endblock %}
+
+{% block content %}
+<h1>Audit Log</h1>
+<p>Who changed what, and when. The log is append only. Nothing on this site
+deletes a row from it.</p>
+
+<div class="cards">
+  <div class="card"><b>{{ summary.total }}</b><span>ENTRIES</span></div>
+  <div class="card"><b>{{ summary.people }}</b><span>PEOPLE</span></div>
+  <div class="card crit"><b>{{ summary.failed_logins }}</b><span>FAILED SIGN INS</span></div>
+  <div class="card"><b style="font-size:16px">{{ summary.last }}</b><span>LAST ENTRY</span></div>
+</div>
+
+<form class="tools noprint" method="GET" action="/log">
+  <select name="action" onchange="this.form.submit()">
+    <option value="">Everything</option>
+    {% for key, name in actions.items() %}
+    <option value="{{ key }}" {% if action == key %}selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  {% if action %}<a class="btn small" href="/log">Clear</a>{% endif %}
+  <span class="count">Showing {{ entries|length }}</span>
+</form>
+
+<div class="panel">
+  {% if entries %}
+  <table>
+    <thead><tr><th>WHEN</th><th>WHO</th><th>WHAT</th><th>DETAIL</th><th>FROM</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td class="mono" style="white-space:nowrap">{{ e.at }}</td>
+        <td>{{ e.who }}</td>
+        <td {% if e.action == 'login_fail' %}style="color:var(--critical)"
+            {% elif e.action == 'delete' %}style="color:var(--high)"{% endif %}>
+          {{ label(e.action) }}</td>
+        <td class="dim">{{ e.detail }}</td>
+        <td class="dim mono">{{ e.address }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="margin:0">Nothing recorded yet.</p>
+  {% endif %}
+</div>
+
+<p class="dim">Failed sign ins are recorded too. A run of them from one address
+is the first sign somebody is guessing passwords.</p>
+{% endblock %}

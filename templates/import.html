@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Import{% endblock %}
+
+{% block content %}
+<h1>Import from CSV</h1>
+<p>Hand over a spreadsheet instead of typing systems in one at a time. Bad rows
+are reported by line number and skipped, so a few typos do not stop the rest
+from loading.</p>
+
+{% if errors %}
+<div class="flash bad">
+  {% for e in errors %}<div>{{ e }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>Upload a file</h3>
+  <form method="POST" action="/import" enctype="multipart/form-data">
+    {{ csrf_field() }}
+    <div class="field">
+      <label for="file">CSV file</label>
+      <input type="file" id="file" name="file" accept=".csv,text/csv">
+    </div>
+    <button type="submit" class="btn">Import</button>
+    <a class="btn small" href="/template.csv" style="margin-left:8px">Download template</a>
+  </form>
+</div>
+
+{% if loaded or problems %}
+<div class="panel">
+  <h3>Result</h3>
+  <p style="color:var(--text);margin:0 0 12px">
+    {{ loaded }} row(s) imported.
+    {% if problems %}{{ problems|length }} row(s) skipped.{% endif %}
+  </p>
+  {% if problems %}
+  <table>
+    <thead><tr><th>SKIPPED ROWS</th></tr></thead>
+    <tbody>
+      {% for p in problems %}
+      <tr><td class="dim">{{ p }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>Expected columns</h3>
+  <table>
+    <thead><tr><th>COLUMN</th><th>ALLOWED VALUES</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">name</td><td class="dim">Any text, up to 80 characters</td></tr>
+      <tr><td class="mono">department</td><td class="dim">Any text</td></tr>
+      <tr><td class="mono">type</td><td class="dim">Database, Application, Web Server, Network, Storage, Email, Other</td></tr>
+      <tr><td class="mono">algorithm</td><td class="dim">RSA, ECC, DH, AES, SHA-256, SHA-384, 3DES, DES, RC4, SHA-1, MD5, ML-KEM, ML-DSA, SLH-DSA, X25519-MLKEM. Common spellings such as Kyber, ECDSA and SHA1 are understood.</td></tr>
+      <tr><td class="mono">key_size</td><td class="dim">A whole number. For ML-KEM use 512, 768 or 1024; for ML-DSA 44, 65 or 87</td></tr>
+      <tr><td class="mono">sensitivity</td><td class="dim">Low, Medium, High, Critical</td></tr>
+      <tr><td class="mono">secrecy_years</td><td class="dim">Years the data must stay secret, 0 to 200. Older files may give <code>lifetime</code> instead</td></tr>
+      <tr><td class="mono">migration_years</td><td class="dim">Optional. Years to migrate, 0 to 20. Estimated from the system type if left out</td></tr>
+      <tr><td class="mono">exposure</td><td class="dim">Optional. Public internet, Partner / vendor network, Internal LAN, Air-gapped</td></tr>
+      <tr><td class="mono">criticality</td><td class="dim">Low, Medium, High, Critical</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

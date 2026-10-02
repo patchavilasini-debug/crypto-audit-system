@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}Protect{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/protect.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<h1>Protect</h1>
+<p>Pick a system to see what to do &mdash; and encrypt its files right now.</p>
+
+{% if errors %}
+<div class="flash bad">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>
+{% endif %}
+
+<div class="panel">
+  <form method="GET" action="/protect" class="tools noprint" style="margin-top:0">
+    <select name="system" onchange="this.form.submit()" style="flex:1">
+      <option value="">Pick a system</option>
+      {% for r in all_systems %}
+      <option value="{{ r.id }}" {% if form.id is defined and form.id == r.id %}selected{% endif %}>{{ r.priority }}. {{ r.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <details class="more-info" {% if errors %}open{% endif %}>
+    <summary>Not in the list? Enter it yourself</summary>
+  <form method="POST" action="/protect">
+    {{ csrf_field() }}
+    <div class="grid2">
+      <div class="field"><label for="name">System name</label>
+        <input id="name" name="name" maxlength="80" value="{{ form.name or '' }}"
+               placeholder="e.g. Patient Records"></div>
+      <div class="field"><label for="department">Department</label>
+        <select id="department" name="department">
+          <option value="">Choose...</option>
+          {% for d in departments %}
+          <option value="{{ d }}" {% if form.department == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="type">System type</label>
+        <select id="type" name="type">
+          <option value="">Choose...</option>
+          {% for t in types %}
+          <option value="{{ t }}" {% if form.type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select></div>
+      <div class="field"><label for="algorithm">Cryptographic algorithm</label>
+        <select id="algorithm" name="algorithm">
+          <option value="">Choose...</option>
+          {% for a in algorithms %}
+          <option value="{{ a }}" {% if form.algorithm == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="key_size">Key size in bits</label>
+        <input id="key_size" name="key_size" type="number" min="1" max="100000"
+               value="{{ form.key_size or '' }}" placeholder="e.g. 2048"></div>
+      <div class="field"><label for="sensitivity">Data sensitivity</label>
+        <select id="sensitivity" name="sensitivity">
+          <option value="">Choose...</option>
+          {% for s in sensitivities %}
+          <option value="{{ s }}" {% if form.sensitivity == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select></div>
+    </div>
+    <div class="field"><label for="criticality">System criticality</label>
+      <select id="criticality" name="criticality">
+        <option value="">Choose...</option>
+        {% for c in criticalities %}
+        <option value="{{ c }}" {% if form.criticality == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select></div>
+    {% include "_mosca_fields.html" %}
+    <button type="submit" class="btn">Build my protection plan</button>
+  </form>
+  </details>
+</div>
+
+{% if plan %}
+<div class="rowhead" style="margin-top:28px">
+  <h2 style="margin:0">{{ plan.name }}</h2>
+  <span class="badge b-{{ plan.level }}">{{ plan.level }}</span>
+</div>
+
+{% set seal_first = emergency and scored.crypto_primitive == 'hash' %}
+
+{% if emergency %}
+<div class="panel" id="emergency" style="border-left:4px solid var(--critical)">
+  <div class="rowhead">
+    <h3 style="margin:0;color:var(--critical)">Already broken &mdash; do this now</h3>
+    {% if scored.id %}<span class="dim">{{ done|length }} of {{ emergency|length }} done</span>{% endif %}
+  </div>
+  <p class="dim" style="margin:6px 0 12px">{{ scored.algorithm }}-{{ scored.key_size }} can be
+  {% if scored.crypto_primitive == 'hash' %}forged{% else %}broken{% endif %} today, without a quantum computer.</p>
+  <table class="rows"><tbody>
+    {% for title, detail in emergency %}
+    {% set n = loop.index %}
+    <tr>
+      <td style="width:36px">
+        {% if scored.id and user and user.role == 'auditor' %}
+        <form method="POST" action="/remediate" style="margin:0">
+    {{ csrf_field() }}
+          <input type="hidden" name="system_id" value="{{ scored.id }}">
+          <input type="hidden" name="step" value="{{ n }}">
+          <input type="hidden" name="done" value="{{ '0' if n in done else '1' }}">
+          <input type="checkbox" {% if n in done %}checked{% endif %} onchange="this.form.submit()"
+                 style="width:18px;height:18px;accent-color:var(--low);cursor:pointer">
+        </form>
+        {% else %}
+        <span style="color:var(--accent);font-weight:600">{{ n }}</span>
+        {% endif %}
+      </td>
+      <td><b {% if n in done %}style="color:var(--low)"{% endif %}>{{ title }}</b>
+        <div class="dim">{{ detail }}</div>
+        {% if n in done %}<div class="dim" style="font-size:12px">Done by {{ done[n].by }}, {{ done[n].at }}</div>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+  {% if not scored.id %}
+  <p class="dim" style="margin:10px 0 0">Add this system to the register to tick these off.</p>
+  {% endif %}
+</div>
+{% else %}
+<div class="answer">Change the lock to <b>{{ target }}</b>
+  {% if plan.level in ["Critical", "High"] %}&mdash; <b class="red">start now</b>.{% else %}at the next upgrade.{% endif %}</div>
+
+<div class="panel">
+  <h3>To do</h3>
+  <table class="rows"><tbody>
+    <tr><td style="width:28px;color:var(--accent);font-weight:600">1</td><td><b>This week:</b> remove access nobody needs, turn on logging.</td></tr>
+    <tr><td style="color:var(--accent);font-weight:600">2</td><td><b>Switch the lock</b> to {{ target }}.</td></tr>
+    <tr><td style="color:var(--accent);font-weight:600">3</td><td><b>Re-encrypt stored data</b>{% if scored and scored.secrecy_years >= 10 %} &mdash; needed, this data lasts {{ scored.secrecy_years|round|int }} years{% else %} &mdash; may not be needed, the data is short-lived{% endif %}.</td></tr>
+    <tr><td style="color:var(--accent);font-weight:600">4</td><td><b>Keys in a vault,</b> one per system.</td></tr>
+    <tr><td style="color:var(--accent);font-weight:600">5</td><td><b>Scan again</b> to prove it changed.</td></tr>
+  </tbody></table>
+</div>
+{% endif %}
+
+<div id="cryptoState" class="noprint"></div>
+
+{% if seal_first %}
+<div class="panel">
+  <h3>Re-seal documents</h3>
+  <p class="dim" style="margin:0 0 14px">Gives each document a new SHA-384 seal. Only its fingerprint
+  is sent &mdash; the document stays on your computer.</p>
+  <input type="hidden" id="sealSystem" value="{{ plan.name }}">
+  <div class="field"><label for="sealIn">Documents</label><input id="sealIn" type="file" multiple></div>
+  <button type="button" class="btn" id="sealBtn">Seal</button>
+  <details class="more-info">
+    <summary>Check a document against its seal</summary>
+    <div class="grid2" style="margin-top:10px">
+      <div class="field"><label for="checkDoc">Document</label><input id="checkDoc" type="file"></div>
+      <div class="field"><label for="checkSeal">Its .seal.json file</label><input id="checkSeal" type="file" accept=".json"></div>
+    </div>
+    <button type="button" class="btn small" id="checkBtn">Check</button>
+  </details>
+  <div id="sealOut" style="margin-top:16px"></div>
+</div>
+<details class="more-info">
+  <summary>Encrypt a file instead</summary>
+<div class="panel">
+  <h3>Encrypt a file of {{ plan.kind_plural }} now</h3>
+  <p class="dim" style="margin:0 0 14px">AES-256-GCM, in your browser. The file never leaves your computer.</p>
+  <div class="grid2">
+    <div class="field"><label for="fileIn">File</label><input id="fileIn" type="file"></div>
+    <div class="field"><label for="filePass">Passphrase</label>
+      <input id="filePass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+  </div>
+  <button type="button" class="btn" id="fileEnc">Encrypt</button>
+  <button type="button" class="btn small" id="fileDec" style="margin-left:8px">Open an encrypted file</button>
+  <div id="fileOut" style="margin-top:16px"></div>
+  <p class="dim" style="margin:14px 0 0">Lose the passphrase and the file cannot be opened.</p>
+</div>
+</details>
+{% else %}
+<div class="panel">
+  <h3>Encrypt a file of {{ plan.kind_plural }} now</h3>
+  <p class="dim" style="margin:0 0 14px">AES-256-GCM, in your browser. The file never leaves your computer.</p>
+  <div class="grid2">
+    <div class="field"><label for="fileIn">File</label><input id="fileIn" type="file"></div>
+    <div class="field"><label for="filePass">Passphrase</label>
+      <input id="filePass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+  </div>
+  <button type="button" class="btn" id="fileEnc">Encrypt</button>
+  <button type="button" class="btn small" id="fileDec" style="margin-left:8px">Open an encrypted file</button>
+  <div id="fileOut" style="margin-top:16px"></div>
+  <p class="dim" style="margin:14px 0 0">Lose the passphrase and the file cannot be opened.</p>
+</div>
+<details class="more-info">
+  <summary>Re-seal documents (for broken seals such as SHA-1)</summary>
+<div class="panel">
+  <h3>Re-seal documents</h3>
+  <p class="dim" style="margin:0 0 14px">Gives each document a new SHA-384 seal. Only its fingerprint
+  is sent &mdash; the document stays on your computer.</p>
+  <input type="hidden" id="sealSystem" value="{{ plan.name }}">
+  <div class="field"><label for="sealIn">Documents</label><input id="sealIn" type="file" multiple></div>
+  <button type="button" class="btn" id="sealBtn">Seal</button>
+  <details class="more-info">
+    <summary>Check a document against its seal</summary>
+    <div class="grid2" style="margin-top:10px">
+      <div class="field"><label for="checkDoc">Document</label><input id="checkDoc" type="file"></div>
+      <div class="field"><label for="checkSeal">Its .seal.json file</label><input id="checkSeal" type="file" accept=".json"></div>
+    </div>
+    <button type="button" class="btn small" id="checkBtn">Check</button>
+  </details>
+  <div id="sealOut" style="margin-top:16px"></div>
+</div>
+</details>
+{% endif %}
+
+<details class="more-info">
+  <summary>Encrypt a single {{ plan.kind_label|lower }} instead</summary>
+<div class="panel">
+  <h3>Or protect a single {{ plan.kind_label|lower }}</h3>
+  <div class="field" style="margin-top:12px">
+    <label for="textIn">{{ plan.kind_label }}</label>
+    <input id="textIn" placeholder="{{ plan.kind_hint }}">
+  </div>
+  <div class="field">
+    <label for="textPass">Passphrase</label>
+    <input id="textPass" type="password" autocomplete="new-password"
+           placeholder="At least 8 characters">
+  </div>
+  <button type="button" class="btn small" id="textEnc">Protect it</button>
+  <button type="button" class="btn small" id="textDec" style="margin-left:8px">Open one</button>
+  <div id="textOut" style="margin-top:16px"></div>
+</div>
+</details>
+
+<details class="more-info">
+  <summary>Full advice for this system</summary>
+<div class="panel">
+  <h3>1. This week &mdash; reduce exposure before anything else</h3>
+  <table><tbody>
+    {% for line in plan.containment %}
+    <tr><td>{{ line }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>2. Replace the algorithm</h3>
+  <table><tbody>
+    <tr><td style="width:120px" class="dim">Move to</td>
+        <td><b style="color:var(--accent)">{{ plan.target_use }}</b></td></tr>
+    <tr><td class="dim">Why</td><td>{{ plan.target_why }}</td></tr>
+    <tr><td class="dim">Also</td><td>{{ plan.target_protocol }}</td></tr>
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>3. The data you have already stored</h3>
+  <table><tbody>
+    {% for line in plan.at_rest %}
+    <tr><td>{{ line }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>4. Look after the keys</h3>
+  <p style="margin:0 0 10px">A new algorithm with badly kept keys is no safer
+  than the old one.</p>
+  <table><tbody>
+    {% for line in plan.key_care %}
+    <tr><td>{{ line }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>5. Prove it worked</h3>
+  <table><tbody>
+    {% for line in plan.verify %}
+    <tr><td>{{ line }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>6. Stop it coming back</h3>
+  <table><tbody>
+    {% for line in plan.ongoing %}
+    <tr><td>{{ line }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+
+{% if plan.level in ["Critical", "High"] %}
+<div class="panel" style="border-left:4px solid var(--high)">
+  <h3>If you genuinely cannot migrate yet</h3>
+  <p style="margin:0 0 10px">Budget, a vendor contract, or a system nobody dares
+  touch. These buy real time without changing the algorithm.</p>
+  <table><tbody>
+    {% for line in plan.interim %}
+    <tr><td>{{ line }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endif %}
+</details>
+{% endif %}
+
+<details class="more-info">
+  <summary>Advice for any organisation</summary>
+{% for g in general %}
+<div class="panel">
+  <h3>{{ g.title }}</h3>
+  <p style="margin:0">{{ g.text }}</p>
+</div>
+{% endfor %}
+</details>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Score working{% endblock %}
+{% from "_mosca.html" import mosca_box, mosca_badge %}
+
+{% block content %}
+<h1>Why each system scored what it did</h1>
+
+<form class="tools noprint" method="GET" action="/results">
+  <select name="system" onchange="this.form.submit()">
+    <option value="">Pick a system</option>
+    {% for r in all_systems %}
+    <option value="{{ r.id }}" {% if only == r.id|string %}selected{% endif %}>{{ r.priority }}. {{ r.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="dept" onchange="this.form.submit()">
+    <option value="">All departments</option>
+    {% for d in all_depts %}
+    <option value="{{ d }}" {% if dept == d %}selected{% endif %}>{{ d }}</option>
+    {% endfor %}
+  </select>
+  {% if dept or level or only %}<a class="btn small" href="/results">Show all</a>{% endif %}
+  <span class="count">{{ results|length }} of {{ total }}</span>
+</form>
+
+{% for r in results %}
+<div class="panel">
+  <div class="rowhead">
+    <h2 style="margin:0;font-size:18px">{{ r.priority }}. {{ r.name }}
+      <span class="dim" style="font-weight:400">{{ r.department }}</span></h2>
+    <span class="badge b-{{ r.risk_level }}">{{ r.risk_level }} &middot; {{ r.risk_percentage|round|int }}/100</span>
+  </div>
+
+  {{ mosca_box(r, this_year) }}
+
+  <p style="margin:14px 0 0;color:var(--text)"><b>Change to:</b> {{ r.target }}
+    <span class="dim">&middot; {{ r.timeframe }}</span>
+    <a class="noprint" href="/protect?system={{ r.id }}" style="margin-left:8px">How to fix &rarr;</a></p>
+
+  <details class="more-info">
+    <summary>Show the score</summary>
+    <table style="margin-top:8px">
+      <tbody>
+        <tr><td>Data outlives its lock</td><td class="n">{{ r.parts.gap }}</td><td class="n dim">of {{ weights.gap }}</td></tr>
+        <tr><td>How badly quantum breaks the lock</td><td class="n">{{ r.parts.weakness }}</td><td class="n dim">of {{ weights.weakness }}</td></tr>
+        <tr><td>How easy to copy ({{ r.exposure }})</td><td class="n">{{ r.parts.exposure }}</td><td class="n dim">of {{ weights.exposure }}</td></tr>
+        <tr><td>How much it matters</td><td class="n">{{ r.parts.impact }}</td><td class="n dim">of {{ weights.impact }}</td></tr>
+        <tr><td><b>Total</b></td><td class="n"><b>{{ r.risk_score }}</b></td><td class="n dim">of 100</td></tr>
+      </tbody>
+    </table>
+    <p class="dim" style="margin:10px 0 0">{{ r.crypto_note }}</p>
+  </details>
+
+  {% if r.review_needed %}
+  <div class="flash bad" style="margin-top:12px">Not recognised &mdash; treated as unsafe until someone checks it.</div>
+  {% endif %}
+</div>
+{% else %}
+<div class="panel"><p style="margin:0">Nothing matches.</p></div>
+{% endfor %}
+{% endblock %}

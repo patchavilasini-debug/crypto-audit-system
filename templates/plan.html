@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Roadmap{% endblock %}
+
+{% block content %}
+<h1>Roadmap</h1>
+<p>Three phases. The order comes from the audit, not from opinion.</p>
+
+<div class="grid3">
+  {% for p in phases %}
+  <div class="tile {% if p.number == 1 %}red{% elif p.number == 2 %}yellow{% else %}green{% endif %}">
+    <span class="d">Phase {{ p.number }} &middot; {{ p.window }}</span>
+    <b>{{ p.systems|length }}</b>
+    <span class="t">{{ p.title }}</span>
+    <span class="d">{{ p.effort|round|int }} years of work in total</span>
+  </div>
+  {% endfor %}
+</div>
+
+{% for p in phases %}
+<h2>Phase {{ p.number }} &mdash; {{ p.title }}</h2>
+<p class="dim" style="margin-top:-4px">
+  {% if p.number == 1 %}Data will outlive its lock. Start now, hybrid first so nothing breaks.
+  {% elif p.number == 2 %}Weak lock, but time to do it properly.
+  {% else %}Already safe or low risk. Fold into normal upgrades.{% endif %}
+</p>
+<div class="panel">
+  {% if p.systems %}
+  <table class="rows">
+    <thead><tr><th>SYSTEM</th><th>NOW</th><th>CHANGE TO</th><th class="n">EFFORT</th></tr></thead>
+    <tbody>
+      {% for r in p.systems %}
+      <tr>
+        <td><b>{{ r.name }}</b><div class="dim">{{ r.department }}</div></td>
+        <td class="mono">{{ r.algorithm }}-{{ r.key_size }}</td>
+        <td>{{ r.target }}</td>
+        <td class="n dim">{{ r.migration_years|round(1) }} yr</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="margin:0">None.</p>
+  {% endif %}
+</div>
+{% endfor %}
+
+<details class="more-info">
+  <summary>The six steps for each system</summary>
+  <div class="panel">
+    <table><tbody>
+      {% for step in steps %}
+      <tr><td class="dim" style="width:30px">{{ loop.index }}</td><td><b>{{ step[0] }}</b>
+        <div class="dim">{{ step[1] }}</div></td></tr>
+      {% endfor %}
+    </tbody></table>
+  </div>
+</details>
+
+<details class="more-info">
+  <summary>What the short names mean</summary>
+  <div class="panel">
+    <table><tbody>
+      <tr><td style="width:160px"><b>ML-KEM</b></td><td class="dim">Post-quantum replacement for RSA/ECC key exchange (NIST FIPS 203). Use it alongside the old one first ("hybrid").</td></tr>
+      <tr><td><b>ML-DSA</b></td><td class="dim">Post-quantum replacement for RSA/ECC signatures (NIST FIPS 204).</td></tr>
+      <tr><td><b>AES-256</b></td><td class="dim">Same algorithm, bigger key. Enough against quantum computers.</td></tr>
+      <tr><td><b>SHA-384</b></td><td class="dim">A longer hash, for anything kept past 2035.</td></tr>
+      <tr><td><b>Keep</b></td><td class="dim">Already quantum-safe. No change.</td></tr>
+    </tbody></table>
+  </div>
+</details>
+{% endblock %}

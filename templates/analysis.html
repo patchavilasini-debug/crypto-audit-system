@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Analysis{% endblock %}
+
+{% block content %}
+<h1>Analysis</h1>
+
+<h2>1. How many are in trouble?</h2>
+<div class="grid3">
+  <a class="tile red" href="/inventory?state=late"><b>{{ states.late|length }}</b><span class="t">Too late</span>
+    <span class="d">{{ pct(states.late|length) }}% of all systems</span></a>
+  <a class="tile yellow" href="/inventory?state=inside"><b>{{ states.inside|length }}</b><span class="t">Still time</span>
+    <span class="d">{{ pct(states.inside|length) }}%</span></a>
+  <a class="tile green" href="/inventory?state=safe"><b>{{ states.safe|length }}</b><span class="t">Safe</span>
+    <span class="d">{{ pct(states.safe|length) }}%</span></a>
+</div>
+
+<h2>2. What is causing it?</h2>
+{% if biggest and biggest.late %}
+<div class="answer">Mostly <b class="red">{{ biggest.name }}</b> &mdash; {{ biggest.late }} of the
+too-late systems use it. Bigger keys don't help; it has to be replaced.</div>
+{% endif %}
+<div class="panel">
+  <div class="legend3" style="margin:0 0 12px">
+    <span><span class="sw" style="background:#E45A5A"></span>quantum breaks it</span>
+    <span><span class="sw" style="background:#B03A3A"></span>broken today</span>
+    <span><span class="sw" style="background:#D9C24A"></span>needs a bigger key</span>
+    <span><span class="sw" style="background:#5AB98A"></span>safe</span>
+  </div>
+  <div style="height:240px"><canvas id="lockChart"></canvas></div>
+</div>
+
+<h2>3. What if quantum computers come sooner or later?</h2>
+<div class="grid3">
+  {% for sc in scenarios %}
+  <div class="tile {% if sc.years == horizon %}chosen{% endif %}">
+    <span class="d">Arrive in {{ sc.years }} years ({{ this_year + sc.years }})</span>
+    <b class="red" style="color:var(--critical)">{{ sc.late }}</b>
+    <span class="t">too late</span>
+  </div>
+  {% endfor %}
+</div>
+<div class="answer"><b class="red">{{ always_late|length }}</b> are too late in every case.
+Start with those.</div>
+
+<h2>4. Fix first</h2>
+<div class="panel">
+  <table class="rows"><tbody>
+    {% for r in top %}
+    <tr>
+      <td style="width:30px;font-weight:600;color:var(--accent)">{{ loop.index }}</td>
+      <td><b>{{ r.name }}</b><div class="dim">{{ r.why }}</div></td>
+      <td class="mono" style="white-space:nowrap">{{ r.algorithm }}-{{ r.key_size }}</td>
+      <td class="noprint" style="text-align:right"><a class="btn small" href="/protect?system={{ r.id }}">How to fix</a></td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  drawLockChart({{ lock_names|tojson }}, {{ lock_counts|tojson }}, {{ lock_colours|tojson }});
+</script>
+{% endblock %}
