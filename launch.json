@@ -1,0 +1,88 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run the site",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Run on the network",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "args": [
+        "--network"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run over HTTPS",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "args": [
+        "--network",
+        "--https"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: knowledge base",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/crypto_rules.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: scoring formula",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/risk_engine.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: ranking and advice",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/recommendation_engine.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: scan a real host",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scanner.py",
+      "args": [
+        "github.com"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: crypto-agility",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/crypto_service.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: CBOM export",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/cbom.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
