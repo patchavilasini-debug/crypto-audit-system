@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — Crypto Audit System</title>
+<meta name="csrf-token" content="{{ csrf_token }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+.signin{max-width:400px;margin:70px auto;padding:0 22px}
+.signin .brand{display:flex;align-items:center;gap:10px;font-weight:600;
+  font-size:19px;margin-bottom:6px}
+.signin .sub{font-size:11px;letter-spacing:.12em;color:var(--dim);margin-bottom:28px}
+</style>
+</head>
+<body>
+<div class="signin">
+  <div class="brand"><span class="mark"></span>Crypto Audit System</div>
+  <div class="sub">CRYPTOGRAPHIC INVENTORY AND MIGRATION</div>
+
+  {% if error %}<div class="flash bad" style="margin-bottom:16px">{{ error }}</div>{% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash {{ category }}" style="margin-bottom:16px">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="panel" style="margin-top:0">
+    <form method="POST">
+    {{ csrf_field() }}
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn" style="width:100%">Sign in</button>
+    </form>
+  </div>
+
+  {% if first_password %}
+  <div class="flash ok" style="margin-top:16px">
+    <b>First run.</b> An account was created for you:<br>
+    username <code>admin</code><br>
+    password <code>{{ first_password }}</code><br>
+    Create your own account and delete this one.
+  </div>
+  {% endif %}
+
+  <p class="dim" style="margin-top:22px;font-size:13px">
+    This register lists which systems use weak cryptography. That is useful to
+    an attacker, so it is not open to everyone.
+  </p>
+</div>
+</body>
+</html>
